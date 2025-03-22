@@ -35,41 +35,36 @@ class PushAPIServer:
 
         @self.app.route("/send", methods=["POST"])
         async def send_endpoint():
-            try:
-                auth_header = request.headers.get("Authorization")
-                if not auth_header or auth_header != f"Bearer {self.token}":
-                    logger.warning(f"来自 {request.remote_addr} 的令牌无效")
-                    abort(403, description="无效令牌")
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or auth_header != f"Bearer {self.token}":
+                logger.warning(f"来自 {request.remote_addr} 的令牌无效")
+                abort(403, description="无效令牌")
 
-                data = await request.get_json()
-                if not data:
-                    abort(400, description="无效的 JSON")
+            data = await request.get_json()
+            if not data:
+                abort(400, description="无效的 JSON")
 
-                required_fields = {"content", "umo"}
-                if missing := required_fields - data.keys():
-                    abort(400, description=f"缺少字段: {missing}")
+            required_fields = {"content", "umo"}
+            if missing := required_fields - data.keys():
+                abort(400, description=f"缺少字段: {missing}")
 
-                message = {
-                    "message_id": data.get("message_id", str(uuid.uuid4())),
-                    "content": data["content"],
-                    "umo": data["umo"],
-                    "callback_url": data.get("callback_url"),
+            message = {
+                "message_id": data.get("message_id", str(uuid.uuid4())),
+                "content": data["content"],
+                "umo": data["umo"],
+                "callback_url": data.get("callback_url"),
+            }
+
+            self.in_queue.put(message)
+            logger.info(f"消息已排队: {message['message_id']}")
+
+            return jsonify(
+                {
+                    "status": "queued",
+                    "message_id": message["message_id"],
+                    "queue_size": self.in_queue.qsize(),
                 }
-
-                self.in_queue.put(message)
-                logger.info(f"消息已排队: {message['message_id']}")
-
-                return jsonify(
-                    {
-                        "status": "queued",
-                        "message_id": message["message_id"],
-                        "queue_size": self.in_queue.qsize(),
-                    }
-                )
-
-            except Exception as e:
-                logger.error(f"API 错误: {str(e)}")
-                abort(500, description="内部服务器错误")
+            )
 
         @self.app.route("/health", methods=["GET"])
         async def health_check():

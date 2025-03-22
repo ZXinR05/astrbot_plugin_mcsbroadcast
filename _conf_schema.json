@@ -1,0 +1,22 @@
+{
+  "api": {
+    "description": "API 配置",
+    "type": "object",
+    "items": {
+      "host": {
+        "description": "API 监听地址，默认为 0.0.0.0",
+        "type": "string",
+        "default": "0.0.0.0"
+      },
+      "port": {
+        "description": "API 监听端口，默认为 9966",
+        "type": "int",
+        "default": 9966
+      },
+      "token": {
+        "description": "请求 API 需要的鉴权 token，务必不要泄漏",
+        "type": "string"
+      }
+    }
+  }
+}

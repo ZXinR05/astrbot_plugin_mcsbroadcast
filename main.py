@@ -1,21 +1,101 @@
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
-from astrbot.api.star import Context, Star, register
-from astrbot.api import logger
+import asyncio
+import secrets
+from multiprocessing import Process, Queue
+from typing import Any
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件", "1.0.0")
-class MyPlugin(Star):
-    def __init__(self, context: Context):
+import aiohttp
+
+from astrbot.api import logger
+from astrbot.api.star import Context, Star, register
+from astrbot.core.config.astrbot_config import AstrBotConfig
+from astrbot.core.message.message_event_result import MessageChain
+
+from .api import run_server  # type: ignore
+
+
+@register("astrbot_plugin_push_lite", "Raven95676", "Astrbot轻量级推送插件", "0.1.0")
+class PushLite(Star):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-    
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        '''这是一个 hello world 指令''' # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
+        self.config = config
+        self.in_queue: Queue | None = None
+        self.out_queue: Queue | None = None
+        self.process: Process | None = None
+        self._running = False
+
+    async def initialize(self):
+        """初始化插件"""
+        if not self.config["api"].get("token"):
+            self.config["api"]["token"] = secrets.token_urlsafe(32)
+            self.config.save_config()
+
+        self.in_queue = Queue()
+        self.out_queue = Queue()
+        self.process = Process(
+            target=run_server,
+            args=(
+                self.config["api"]["token"],
+                self.config["api"].get("host", "0.0.0.0"),
+                self.config["api"].get("port", 9966),
+                self.in_queue,
+                self.out_queue,
+            ),
+            daemon=True,
+        )
+        self.process.start()
+        self._running = True
+        asyncio.create_task(self._process_messages())
+
+    async def _process_messages(self):
+        """处理来自子进程的消息"""
+        while self._running:
+            try:
+                message = await asyncio.get_event_loop().run_in_executor(
+                    None, self.in_queue.get
+                )
+                logger.info(f"正在处理消息: {message['message_id']}")
+
+                try:
+                    chain = MessageChain().message(message["content"])
+                    await self.context.send_message(message["umo"], chain)
+                    result = {
+                        "message_id": message["message_id"],
+                        "success": True,
+                    }
+                except Exception as e:
+                    result = {
+                        "message_id": message["message_id"],
+                        "success": False,
+                        "error": str(e),
+                    }
+
+                self.out_queue.put(result)
+
+                if callback_url := message.get("callback_url"):
+                    await self._send_callback(callback_url, result)
+
+            except Exception as e:
+                logger.error(f"消息处理失败: {str(e)}")
+
+    async def _send_callback(self, url: str, data: dict[str, Any]):
+        """发送回调通知"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=data, timeout=5) as resp:
+                    if resp.status >= 400:
+                        logger.warning(f"回调失败: 状态码 {resp.status}")
+        except Exception as e:
+            logger.error(f"回调错误: {str(e)}")
 
     async def terminate(self):
-        '''可选择实现 terminate 函数，当插件被卸载/停用时会调用。'''
+        """停止插件"""
+        self._running = False
+        if self.process:
+            self.process.terminate()
+            self.process.join(5)
+        if self.in_queue:
+            while not self.in_queue.empty():
+                self.in_queue.get()
+        if self.out_queue:
+            while not self.out_queue.empty():
+                self.out_queue.get()

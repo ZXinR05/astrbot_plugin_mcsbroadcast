@@ -68,6 +68,7 @@ class PushLite(Star):
                         "success": False,
                         "error": str(e),
                     }
+                    logger.error(f"消息发送失败: {str(e)}")
 
                 self.out_queue.put(result)
 

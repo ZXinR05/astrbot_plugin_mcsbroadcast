@@ -9,11 +9,10 @@ from astrbot.api import logger
 
 
 class PushAPIServer:
-    def __init__(self, token: str, in_queue, out_queue):
+    def __init__(self, token: str, in_queue):
         self.app = Quart(__name__)
         self.token = token
         self.in_queue = in_queue
-        self.out_queue = out_queue
         self._setup_routes()
         self._server_task: asyncio.Task | None = None
 
@@ -96,7 +95,7 @@ class PushAPIServer:
                 pass
 
 
-def run_server(token: str, host: str, port: int, in_queue, out_queue):
+def run_server(token: str, host: str, port: int, in_queue):
     """子进程入口"""
-    server = PushAPIServer(token, in_queue, out_queue)
+    server = PushAPIServer(token, in_queue)
     asyncio.run(server.start(host, port))

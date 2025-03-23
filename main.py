@@ -19,7 +19,6 @@ class PushLite(Star):
         super().__init__(context)
         self.config = config
         self.in_queue: Queue | None = None
-        self.out_queue: Queue | None = None
         self.process: Process | None = None
         self._running = False
 
@@ -30,7 +29,6 @@ class PushLite(Star):
             self.config.save_config()
 
         self.in_queue = Queue()
-        self.out_queue = Queue()
         self.process = Process(
             target=run_server,
             args=(
@@ -38,7 +36,6 @@ class PushLite(Star):
                 self.config["api"].get("host", "0.0.0.0"),
                 self.config["api"].get("port", 9966),
                 self.in_queue,
-                self.out_queue,
             ),
             daemon=True,
         )
@@ -70,8 +67,6 @@ class PushLite(Star):
                     }
                     logger.error(f"消息发送失败: {str(e)}")
 
-                self.out_queue.put(result)
-
                 if callback_url := message.get("callback_url"):
                     await self._send_callback(callback_url, result)
 
@@ -97,6 +92,3 @@ class PushLite(Star):
         if self.in_queue:
             while not self.in_queue.empty():
                 self.in_queue.get()
-        if self.out_queue:
-            while not self.out_queue.empty():
-                self.out_queue.get()

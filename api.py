@@ -1,8 +1,6 @@
 import asyncio
 import uuid
-from typing import Any
 
-import aiohttp
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from quart import Quart, abort, jsonify, request
@@ -17,7 +15,6 @@ class PushAPIServer:
         self.in_queue = in_queue
         self.out_queue = out_queue
         self._setup_routes()
-        self.http_session: aiohttp.ClientSession | None = None
         self._server_task: asyncio.Task | None = None
 
     def _setup_routes(self):
@@ -75,17 +72,8 @@ class PushAPIServer:
                 }
             )
 
-    async def _wait_for_result(self, message_id: str) -> dict[str, Any]:
-        """等待主进程处理结果"""
-        while True:
-            result = self.out_queue.get()
-            if result.get("message_id") == message_id:
-                return result
-            self.out_queue.put(result)
-
     async def start(self, host: str, port: int):
         """启动HTTP服务"""
-        self.http_session = aiohttp.ClientSession()
         config = Config()
         config.bind = [f"{host}:{port}"]
         self._server_task = asyncio.create_task(serve(self.app, config))
@@ -100,8 +88,6 @@ class PushAPIServer:
 
     async def close(self):
         """关闭资源"""
-        if self.http_session:
-            await self.http_session.close()
         if self._server_task:
             self._server_task.cancel()
             try:

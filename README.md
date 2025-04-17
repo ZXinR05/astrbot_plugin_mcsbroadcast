@@ -3,7 +3,7 @@
 > [!caution]
 > token切勿泄漏，如已泄漏请尽快修改。持有token者可令Bot发送任意文本消息。
 
-Astrbot轻量级推送插件，提供api服务。
+Astrbot轻量级推送插件，提供api服务。目前仅支持发送文本消息和图片。
 
 ## 调用方法
 
@@ -20,8 +20,9 @@ Astrbot轻量级推送插件，提供api服务。
 **Request Body (JSON):**  
 ```json
 {
-  "content": "消息内容",
+  "content": "消息内容或base64编码的图片",
   "umo": "目标会话标识",
+  "type": "可选，消息类型，默认为text，可选值：text, image",
   "callback_url": "可选，处理结果回调URL"
 }
 ```

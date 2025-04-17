@@ -48,6 +48,7 @@ class PushAPIServer:
                 "message_id": data.get("message_id", str(uuid.uuid4())),
                 "content": data["content"],
                 "umo": data["umo"],
+                "type": data.get("message_type", "text"),
                 "callback_url": data.get("callback_url"),
             }
 

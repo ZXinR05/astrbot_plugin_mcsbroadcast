@@ -1,10 +1,14 @@
 import asyncio
+import base64
 import secrets
+from io import BytesIO
 from multiprocessing import Process, Queue
 from typing import Any
 
 import aiohttp
+from PIL import Image as ImageP
 
+import astrbot.core.message.components as Comp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 from astrbot.core.config.astrbot_config import AstrBotConfig
@@ -13,7 +17,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from .api import run_server  # type: ignore
 
 
-@register("astrbot_plugin_push_lite", "Raven95676", "Astrbot轻量级推送插件", "0.1.1")
+@register("astrbot_plugin_push_lite", "Raven95676", "Astrbot轻量级推送插件", "0.2.0")
 class PushLite(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -46,32 +50,34 @@ class PushLite(Star):
     async def _process_messages(self):
         """处理来自子进程的消息"""
         while self._running:
+            message = await asyncio.get_event_loop().run_in_executor(
+                None, self.in_queue.get
+            )
+            logger.info(f"正在处理消息: {message['message_id']}")
             try:
-                message = await asyncio.get_event_loop().run_in_executor(
-                    None, self.in_queue.get
-                )
-                logger.info(f"正在处理消息: {message['message_id']}")
+                result = {"message_id": message["message_id"], "success": True}
+                if message["type"] == "image":
+                    logger.debug("处理图片消息")
+                    try:
+                        image = base64.b64decode(message["content"])
+                        ImageP.open(BytesIO(image)).verify()
+                    except Exception:
+                        raise Exception("不支持的图片格式")
+                    chain = MessageChain(chain=[Comp.Image.fromBytes(image)])
+                else:
+                    logger.debug("处理文本消息")
+                    chain = MessageChain(chain=[Comp.Plain(message["content"])])
 
-                try:
-                    chain = MessageChain().message(message["content"])
-                    await self.context.send_message(message["umo"], chain)
-                    result = {
-                        "message_id": message["message_id"],
-                        "success": True,
-                    }
-                except Exception as e:
-                    result = {
-                        "message_id": message["message_id"],
-                        "success": False,
-                        "error": str(e),
-                    }
-                    logger.error(f"消息发送失败: {str(e)}")
-
+                await self.context.send_message(message["umo"], chain)
+                logger.info(f"消息处理完成: {message['message_id']}")
+            except Exception as e:
+                logger.error(f"消息发送失败: {str(e)}")
+                result.update({"success": False, "error": str(e)})
+            finally:
                 if callback_url := message.get("callback_url"):
                     await self._send_callback(callback_url, result)
-
-            except Exception as e:
-                logger.error(f"消息处理失败: {str(e)}")
+                message = None
+                chain = None
 
     async def _send_callback(self, url: str, data: dict[str, Any]):
         """发送回调通知"""

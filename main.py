@@ -62,8 +62,7 @@ class PushLite(Star):
                         image = base64.b64decode(message["content"])
                         ImageP.open(BytesIO(image)).verify()
                     except Exception:
-                        logger.error("不支持的图片格式")
-                        result.update({"success": False, "error": "不支持的图片格式"})
+                        raise Exception("不支持的图片格式")
                     chain = MessageChain(chain=[Comp.Image.fromBytes(image)])
                 else:
                     logger.debug("处理文本消息")

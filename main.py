@@ -69,13 +69,13 @@ class PushLite(Star):
                     chain = MessageChain(chain=[Comp.Plain(message["content"])])
 
                 await self.context.send_message(message["umo"], chain)
+                logger.info(f"消息处理完成: {message['message_id']}")
             except Exception as e:
                 logger.error(f"消息发送失败: {str(e)}")
                 result.update({"success": False, "error": str(e)})
             finally:
                 if callback_url := message.get("callback_url"):
                     await self._send_callback(callback_url, result)
-                logger.info(f"消息处理完成: {message['message_id']}")
                 message = None
                 chain = None
 

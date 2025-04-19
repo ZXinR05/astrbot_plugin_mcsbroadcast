@@ -52,6 +52,9 @@ class PushLite(Star):
             try:
                 result = {"message_id": message["message_id"], "success": True}
 
+                logger.debug("处理文本消息")
+                chain = MessageChain(chain=[Comp.Plain(message["content"])])
+                
                 await self.context.send_message(message["umo"], chain)
                 logger.info(f"消息处理完成: {message['message_id']}")
             except Exception as e:

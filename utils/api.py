@@ -6,12 +6,13 @@ from hypercorn.config import Config
 from quart import Quart, abort, jsonify, request
 
 from astrbot.api import logger
+from .event_handler import event_handel
 
 
 class PushAPIServer:
-    def __init__(self, token: str, in_queue):
+    def __init__(self, pair: dict, in_queue):
         self.app = Quart(__name__)
-        self.token = token
+        self.pair = pair
         self.in_queue = in_queue
         self._setup_routes()
         self._server_task: asyncio.Task | None = None
@@ -31,26 +32,24 @@ class PushAPIServer:
 
         @self.app.route("/send", methods=["POST"])
         async def send_endpoint():
-            auth_header = request.headers.get("Authorization")
-            if not auth_header or auth_header != f"Bearer {self.token}":
-                logger.warning(f"来自 {request.remote_addr} 的令牌无效")
-                abort(403, description="无效令牌")
-
+            source = request.remote_addr
             data = await request.get_json()
+            
             if not data:
+                logger.warning("无效的 JSON")
                 abort(400, description="无效的 JSON")
+            
+            if not self.pair.get(source):
+                logger.warning(f"{request.remote_addr} 不在服务器列表中")
+                abort(400, description="不在服务器列表中")
+            logger.debug(f"收到来自{source}的消息：{data}")
 
-            required_fields = {"content", "umo"}
+            required_fields = {"event"}
             if missing := required_fields - data.keys():
+                logger.warning(f"缺少字段: {missing}")
                 abort(400, description=f"缺少字段: {missing}")
 
-            message = {
-                "message_id": data.get("message_id", str(uuid.uuid4())),
-                "content": data["content"],
-                "umo": data["umo"],
-                "type": data.get("message_type", "text"),
-                "callback_url": data.get("callback_url"),
-            }
+            message = event_handel(data, self.pair.get(source))
 
             self.in_queue.put(message)
             logger.info(f"消息已排队: {message['message_id']}")
@@ -63,21 +62,13 @@ class PushAPIServer:
                 }
             )
 
-        @self.app.route("/health", methods=["GET"])
-        async def health_check():
-            return jsonify(
-                {
-                    "status": "ok",
-                    "queue_size": self.in_queue.qsize(),
-                }
-            )
 
     async def start(self, host: str, port: int):
         """启动HTTP服务"""
         config = Config()
         config.bind = [f"{host}:{port}"]
         self._server_task = asyncio.create_task(serve(self.app, config))
-        logger.info(f"PushLite服务已启动于 {host}:{port}")
+        logger.info(f"MCSBroadcast服务已启动于 {host}:{port}")
 
         try:
             await self._server_task
@@ -96,7 +87,7 @@ class PushAPIServer:
                 pass
 
 
-def run_server(token: str, host: str, port: int, in_queue):
+def run_server(host: str, port: int, pair: dict, in_queue):
     """子进程入口"""
-    server = PushAPIServer(token, in_queue)
+    server = PushAPIServer(pair, in_queue)
     asyncio.run(server.start(host, port))

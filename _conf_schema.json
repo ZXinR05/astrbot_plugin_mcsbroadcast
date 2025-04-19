@@ -11,11 +11,21 @@
       "port": {
         "description": "API 监听端口，默认为 9966",
         "type": "int",
-        "default": 9966
+        "default": 9977
+      }
+    }
+  },
+  "mcs": {
+    "description": "MCS 配置(server和sid一一对应)",
+    "type": "object",
+    "items": {
+      "server": {
+        "description": "MC服务器地址",
+        "type": "list"
       },
-      "token": {
-        "description": "请求 API 需要的鉴权 token，务必不要泄漏",
-        "type": "string"
+      "sid": {
+        "description": "填写要推送的SID",
+        "type": "list"
       }
     }
   }

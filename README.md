@@ -52,7 +52,7 @@ Minecraft 服务器事件推送
 | player_gamemode_change  | ✗    |
 | player_item_break       | ✗    |
 | player_join             | ✓    |
-| player_kick             | ✓    |
+| player_kick             | ✗    |
 | player_quit             | ✓    |
 | player_respawn          | ✓    |
 | lightning_strike        | ✗    |

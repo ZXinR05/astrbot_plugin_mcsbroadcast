@@ -15,7 +15,7 @@ def event_handel(data, sid):
         message["content"] = f'{data["message"]} 在线时长 {data["duration"]}'
         
     if event == "player_chat":
-        message["content"] = fr'\<{data["player"]}\> {data["message"]}'
+        message["content"] = fr'{data["player"]}: {data["message"]}'
 
     return message
 

@@ -1,32 +1,32 @@
 {
-  "api": {
-    "description": "API 配置",
-    "type": "object",
-    "items": {
-      "host": {
-        "description": "API 监听地址，默认为 0.0.0.0",
-        "type": "string",
-        "default": "0.0.0.0"
-      },
-      "port": {
-        "description": "API 监听端口，默认为 9966",
-        "type": "int",
-        "default": 9977
-      }
+    "api": {
+        "description": "API 配置",
+        "type": "object",
+        "items": {
+            "host": {
+                "description": "API 监听地址，默认为 0.0.0.0",
+                "type": "string",
+                "default": "0.0.0.0"
+            },
+            "port": {
+                "description": "API 监听端口，默认为 9900",
+                "type": "int",
+                "default": 9900
+            }
+        }
+    },
+    "mcs": {
+        "description": "MCS 配置(token和sid一一对应)",
+        "type": "object",
+        "items": {
+            "token": {
+                "description": "MC服务器的webhook_token",
+                "type": "list"
+            },
+            "sid": {
+                "description": "填写要推送的SID",
+                "type": "list"
+            }
+        }
     }
-  },
-  "mcs": {
-    "description": "MCS 配置(server和sid一一对应)",
-    "type": "object",
-    "items": {
-      "server": {
-        "description": "MC服务器地址",
-        "type": "list"
-      },
-      "sid": {
-        "description": "填写要推送的SID",
-        "type": "list"
-      }
-    }
-  }
 }

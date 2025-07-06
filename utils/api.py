@@ -34,13 +34,14 @@ class PushAPIServer:
         async def send_endpoint():
             source = request.remote_addr
             data = await request.get_json()
+            token = request.headers.get("X-Webhook-Token")
             
             if not data:
                 logger.warning("无效的 JSON")
                 abort(400, description="无效的 JSON")
             
-            if not self.pair.get(source):
-                logger.warning(f"{request.remote_addr} 不在服务器列表中")
+            if not self.pair.get(token):
+                # logger.warning(f"{request.remote_addr} 不在服务器列表中")
                 abort(400, description="不在服务器列表中")
             logger.debug(f"收到来自{source}的消息：{data}")
 
@@ -49,7 +50,7 @@ class PushAPIServer:
                 logger.warning(f"缺少字段: {missing}")
                 abort(400, description=f"缺少字段: {missing}")
 
-            message = event_handel(data, self.pair.get(source))
+            message = event_handel(data, self.pair.get(token))
 
             self.in_queue.put(message)
             logger.info(f"消息已排队: {message['message_id']}")

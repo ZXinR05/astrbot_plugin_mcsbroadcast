@@ -15,7 +15,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from .utils.api import run_server  # type: ignore
 
 
-@register("astrbot_plugin_mcsbroadcast", "ZXinR05", "Minecraft服务器事件推送插件", "0.0.2")
+@register("astrbot_plugin_mcsbroadcast", "ZXinR05", "Minecraft服务器事件推送插件", "0.2.0")
 class PushLite(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)

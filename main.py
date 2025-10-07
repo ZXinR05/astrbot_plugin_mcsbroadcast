@@ -70,11 +70,6 @@ class PushLite(Star):
     async def terminate(self):
         """停止插件"""
         self._running = False
-        if self.in_queue:
-            self.in_queue.put("__close__")
         if self.process:
             self.process.terminate()
             self.process.join(5)
-        if self.in_queue:
-            while not self.in_queue.empty():
-                self.in_queue.get()

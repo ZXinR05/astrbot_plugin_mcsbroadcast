@@ -50,15 +50,17 @@ class PushAPIServer:
                 logger.warning(f"缺少字段: {missing}")
                 abort(400, description=f"缺少字段: {missing}")
 
-            message = event_handel(data, self.pair.get(token))
-
-            self.in_queue.put(message)
-            logger.info(f"消息已排队: {message['message_id']}")
+            message_id = []
+            for sid in self.pair.get(token):
+                message = event_handel(data, sid)
+                self.in_queue.put(message)
+                message_id.append(message["message_id"])
+                logger.info(f"消息已排队: {message['message_id']}")
 
             return jsonify(
                 {
                     "status": "queued",
-                    "message_id": message["message_id"],
+                    "message_id": message_id,
                     # "queue_size": self.in_queue,
                 }
             )

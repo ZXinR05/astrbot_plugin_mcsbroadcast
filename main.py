@@ -15,7 +15,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from .utils.api import run_server  # type: ignore
 
 
-@register("astrbot_plugin_mcsbroadcast", "ZXinR05", "Minecraft服务器事件推送插件", "0.2.2")
+@register("astrbot_plugin_mcsbroadcast", "ZXinR05", "Minecraft服务器事件推送插件", "0.2.3")
 class PushLite(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -33,7 +33,7 @@ class PushLite(Star):
             args=(
                 self.config["api"].get("host", "0.0.0.0"),
                 self.config["api"].get("port", 9900),
-                dict(zip(self.config["mcs"].get("token"), self.config["mcs"].get("sid"))),
+                self.get_pair(self.config["mcs"].get("token"), self.config["mcs"].get("sid")),
                 self.in_queue,
             ),
             daemon=True,
@@ -73,3 +73,9 @@ class PushLite(Star):
         if self.process:
             self.process.terminate()
             self.process.join(5)
+
+    def get_pair(self, list1, list2):
+        pair = {}
+        for key, value in zip(list1, list2):
+            pair[key] = pair.get(key, []) + [value]
+        return pair

@@ -59,7 +59,7 @@ class PushAPIServer:
                 {
                     "status": "queued",
                     "message_id": message["message_id"],
-                    "queue_size": self.in_queue.qsize(),
+                    # "queue_size": self.in_queue,
                 }
             )
 

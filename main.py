@@ -48,6 +48,8 @@ class PushLite(Star):
             message = await asyncio.get_event_loop().run_in_executor(
                 None, self.in_queue.get
             )
+            if message == "__close__":
+                break
             logger.info(f"正在处理消息: {message['message_id']}")
             try:
                 result = {"message_id": message["message_id"], "success": True}
@@ -68,6 +70,8 @@ class PushLite(Star):
     async def terminate(self):
         """停止插件"""
         self._running = False
+        if self.in_queue:
+            self.in_queue.put("__close__")
         if self.process:
             self.process.terminate()
             self.process.join(5)

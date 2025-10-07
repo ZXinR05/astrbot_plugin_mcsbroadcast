@@ -91,4 +91,18 @@ class PushAPIServer:
 def run_server(host: str, port: int, pair: dict, in_queue):
     """子进程入口"""
     server = PushAPIServer(pair, in_queue)
-    asyncio.run(server.start(host, port))
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    server_task = loop.create_task(server.start(host, port))
+
+    async def monitor_queue():
+        while True:
+            msg = in_queue.get()
+            if msg == "__close__":
+                await server.close()
+                break
+    
+    monitor_task = loop.create_task(monitor_queue())
+    loop.run_until_complete(asyncio.gather(server_task, monitor_task))
+
